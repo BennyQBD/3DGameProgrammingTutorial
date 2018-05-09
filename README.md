@@ -1,7 +1,7 @@
-CGFX5
+3D Game Programming Tutorial
 ==
 
-Base code for new 3D stuff
+Code for thebennybox 3D Game Programming Tutorial (https://www.youtube.com/playlist?list=PLEETnX-uPtBUrfzE3Dxy3PWyApnW6YEMm ) 
 
 ## Build Dependencies ##
 - [CMAKE](http://www.cmake.org/)

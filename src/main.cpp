@@ -14,6 +14,21 @@
 #include "math/plane.hpp"
 #include "math/intersects.hpp"
 
+class TempEventHandler : public IApplicationEventHandler
+{
+public:
+	bool keyDown = false;
+	TempEventHandler() {}
+	virtual void onKeyDown(uint32 keyCode, bool isRepeat)
+	{
+		keyDown = true;
+	}
+	virtual void onKeyUp(uint32 keyCode, bool isRepeat)
+	{
+		keyDown = false;
+	}
+};
+
 // NOTE: Profiling reveals that in the current instanced rendering system:
 // - Updating the buffer takes more time than
 // - Calculating the transforms which takes more time than
@@ -78,7 +93,7 @@ static int runApp(Application* app)
 	float randScaleX = randZ * window.getWidth()/(float)window.getHeight();
 	float randScaleY = randZ;
 	
-	uint32 numInstances = 1000;
+	uint32 numInstances = 100;
 	Matrix transformMatrix(Matrix::identity());
 	Transform transform;
 	Array<Matrix> transformMatrixArray;
@@ -102,6 +117,7 @@ static int runApp(Application* app)
 //	drawParams.destBlend = RenderDevice::BLEND_FUNC_ONE;
 	// End scene creation
 
+	TempEventHandler eventHandler;
 	uint32 fps = 0;
 	double lastTime = Time::getTime();
 	double fpsTimeCounter = 0.0;
@@ -124,11 +140,13 @@ static int runApp(Application* app)
 		
 		bool shouldRender = false;
 		while(updateTimer >= frameTime) {
-			app->processMessages(frameTime);
+			app->processMessages(frameTime, eventHandler);
 			// Begin scene update
 			transform.setRotation(Quaternion(Vector3f(1.0f, 1.0f, 1.0f).normalized(), amt*10.0f/11.0f));
-			for(uint32 i = 0; i < transformMatrixArray.size(); i++) {
-				transformMatrixArray[i] = (perspective * transformMatrixBaseArray[i] * transform.toMatrix());
+			if(eventHandler.keyDown) {
+				for(uint32 i = 0; i < transformMatrixArray.size(); i++) {
+					transformMatrixArray[i] = (perspective * transformMatrixBaseArray[i] * transform.toMatrix());
+				}
 			}
 			vertexArray.updateBuffer(4, &transformMatrixArray[0],
 					transformMatrixArray.size() * sizeof(Matrix));

@@ -86,9 +86,10 @@ typedef uintptr_t uintptr;
 	#define CONSTEXPR constexpr
 #endif
 
+// make objects uncopyable by deleting copy and assignment dtors, valid in c++-11
 #define NULL_COPY_AND_ASSIGN(T) \
-	T(const T& other) {(void)other;} \
-	void operator=(const T& other) { (void)other; }
+	T(const T&) = delete; \
+	void operator=(const T&) = delete;
 
 #define LOG_ERROR "Error"
 #define LOG_WARNING "Warning"

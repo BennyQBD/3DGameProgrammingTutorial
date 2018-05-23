@@ -2,6 +2,7 @@
 
 #include "core/common.hpp"
 #include "dataStructures/array.hpp"
+#include <tuple>
 
 struct BaseECSComponent;
 typedef void* EntityHandle;
@@ -11,8 +12,27 @@ typedef void (*ECSComponentFreeFunction)(BaseECSComponent* comp);
 
 struct BaseECSComponent
 {
-	static uint32 nextID();
+public:
+	static uint32 registerComponentType(ECSComponentCreateFunction createfn,
+			ECSComponentFreeFunction freefn, size_t size);
 	EntityHandle entity = NULL_ENTITY_HANDLE;
+
+	inline static ECSComponentCreateFunction getTypeCreateFunction(uint32 id)
+	{
+		return std::get<0>(componentTypes[id]);
+	}
+
+	inline static ECSComponentFreeFunction getTypeFreeFunction(uint32 id)
+	{
+		return std::get<1>(componentTypes[id]);
+	}
+
+	inline static size_t getTypeSize(uint32 id)
+	{
+		return std::get<2>(componentTypes[id]);
+	}
+private:
+	static Array<std::tuple<ECSComponentCreateFunction, ECSComponentFreeFunction, size_t> > componentTypes;
 };
 
 template<typename T>
@@ -42,7 +62,7 @@ void ECSComponentFree(BaseECSComponent* comp)
 }
 
 template<typename T>
-const uint32 ECSComponent<T>::ID(BaseECSComponent::nextID());
+const uint32 ECSComponent<T>::ID(BaseECSComponent::registerComponentType(ECSComponentCreate<T>, ECSComponentFree<T>, sizeof(T)));
 
 template<typename T>
 const size_t ECSComponent<T>::SIZE(sizeof(T));

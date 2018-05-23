@@ -38,7 +38,7 @@ private:
 
 	inline std::pair<uint32, Array<std::pair<uint32, uint32> > >* handleToRawType(EntityHandle handle)
 	{
-		(std::pair<uint32, Array<std::pair<uint32, uint32> > >*)handle;
+		return (std::pair<uint32, Array<std::pair<uint32, uint32> > >*)handle;
 	}
 
 	inline uint32 handleToEntityIndex(EntityHandle handle)
@@ -50,6 +50,8 @@ private:
 	{
 		return handleToRawType(handle)->second;
 	}
+
+	void removeComponentInternal(uint32 componentID, uint32 index) {}
 
 	NULL_COPY_AND_ASSIGN(ECS);
 };

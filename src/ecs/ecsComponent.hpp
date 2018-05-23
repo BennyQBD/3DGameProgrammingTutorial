@@ -31,6 +31,11 @@ public:
 	{
 		return std::get<2>(componentTypes[id]);
 	}
+
+	inline static bool isTypeValid(uint32 id)
+	{
+		return id < componentTypes.size();
+	}
 private:
 	static Array<std::tuple<ECSComponentCreateFunction, ECSComponentFreeFunction, size_t> > componentTypes;
 };

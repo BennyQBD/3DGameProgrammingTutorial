@@ -1,5 +1,6 @@
 #include "ecs.hpp"
 #include "core/memory.hpp"
+#include "math/math.hpp"
 
 ECS::~ECS()
 {
@@ -102,13 +103,98 @@ bool ECS::removeComponentInternal(EntityHandle handle, uint32 componentID)
 	return false;
 }
 
-BaseECSComponent* ECS::getComponentInternal(Array<std::pair<uint32, uint32> >& entityComponents, uint32 componentID)
+BaseECSComponent* ECS::getComponentInternal(Array<std::pair<uint32, uint32> >& entityComponents, Array<uint8>& array, uint32 componentID)
 {
 	for(uint32 i = 0; i < entityComponents.size(); i++) {
 		if(componentID == entityComponents[i].first) {
-			return (BaseECSComponent*)&components[componentID][entityComponents[i].second];
+			return (BaseECSComponent*)&array[entityComponents[i].second];
 		}
 	}
 	return nullptr;
+}
+
+bool ECS::removeSystem(BaseECSSystem& system)
+{
+	for(uint32 i = 0; i < systems.size(); i++) {
+		if(&system == systems[i]) {
+			systems.erase(systems.begin() + i);
+			return true;
+		}
+	}
+	return false;
+}
+
+void ECS::updateSystems(float delta)
+{
+	Array<BaseECSComponent*> componentParam;
+	Array<Array<uint8>*> componentArrays;
+	for(uint32 i = 0; i < systems.size(); i++) {
+		const Array<uint32>& componentTypes = systems[i]->getComponentTypes();
+		if(componentTypes.size() == 1) {
+			size_t typeSize = BaseECSComponent::getTypeSize(componentTypes[0]);
+			Array<uint8>& array = components[componentTypes[0]];
+			for(uint32 j = 0; j < array.size(); j += typeSize) {
+				BaseECSComponent* component = (BaseECSComponent*)&array[j];
+				systems[i]->updateComponents(delta, &component);
+			}
+		} else {
+			updateSystemWithMultipleComponents(i, delta, componentTypes, componentParam, componentArrays);
+		}
+	}
+}
+
+uint32 ECS::findLeastCommonComponent(const Array<uint32>& componentTypes)
+{
+	uint32 minSize = components[componentTypes[0]].size()
+		/BaseECSComponent::getTypeSize(componentTypes[0]);
+	uint32 minIndex = 0;
+	for(uint32 i = 1; i < componentTypes.size(); i++) {
+		size_t typeSize = BaseECSComponent::getTypeSize(componentTypes[i]);
+		uint32 size = components[componentTypes[i]].size()/typeSize;
+		if(size < minSize) {
+			minSize = size;
+			minIndex = i;
+		}
+	}
+
+	return minIndex;
+}
+
+void ECS::updateSystemWithMultipleComponents(uint32 index, float delta,
+		const Array<uint32>& componentTypes, Array<BaseECSComponent*>& componentParam,
+		Array<Array<uint8>*>& componentArrays)
+{
+	componentParam.resize(Math::max(componentParam.size(), componentTypes.size()));
+	componentArrays.resize(Math::max(componentArrays.size(), componentTypes.size()));
+	for(uint32 i = 0; i < componentTypes.size(); i++) {
+		componentArrays[i] = &components[componentTypes[i]];
+	}
+	uint32 minSizeIndex = findLeastCommonComponent(componentTypes);
+
+	size_t typeSize = BaseECSComponent::getTypeSize(componentTypes[minSizeIndex]);
+	Array<uint8>& array = *componentArrays[minSizeIndex];
+	for(uint32 i = 0; i < array.size(); i += typeSize) {
+		componentParam[minSizeIndex] = (BaseECSComponent*)&array[i];
+		Array<std::pair<uint32, uint32> >& entityComponents =
+			handleToEntity(componentParam[minSizeIndex]->entity);
+
+		bool isValid = true;
+		for(uint32 j = 0; j < componentTypes.size(); j++) {
+			if(j == minSizeIndex) {
+				continue;
+			}
+
+			componentParam[j] = getComponentInternal(entityComponents,
+					*componentArrays[j], componentTypes[j]);
+			if(componentParam[j] == nullptr) {
+				isValid = false;
+				break;
+			}
+		}
+
+		if(isValid) {
+			systems[index]->updateComponents(delta, &componentParam[0]);
+		}
+	}
 }
 

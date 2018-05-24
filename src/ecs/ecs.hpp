@@ -16,13 +16,22 @@ public:
 
 	// Component methods
 	template<class Component>
-	void addComponent(EntityHandle entity, Component* component);
+	inline void addComponent(EntityHandle entity, Component* component)
+	{
+		addComponentInternal(entity, handleToEntity(entity), Component::ID, component);
+	}
 
 	template<class Component>
-	void removeComponent(EntityHandle entity);
+	bool removeComponent(EntityHandle entity)
+	{
+		return removeComponentInternal(entity, Component::ID);
+	}
 
 	template<class Component>
-	void getComponent(EntityHandle entity);
+	Component* getComponent(EntityHandle entity)
+	{
+		getComponentInternal(handleToEntity(entity), Component::ID);
+	}
 
 	// System methods
 	inline void addSystem(BaseECSSystem& system)
@@ -51,7 +60,10 @@ private:
 		return handleToRawType(handle)->second;
 	}
 
-	void removeComponentInternal(uint32 componentID, uint32 index) {}
+	void deleteComponent(uint32 componentID, uint32 index);
+	bool removeComponentInternal(EntityHandle handle, uint32 componentID);
+	void addComponentInternal(EntityHandle handle, Array<std::pair<uint32, uint32> >& entity, uint32 componentID, BaseECSComponent* component);
+	BaseECSComponent* getComponentInternal(Array<std::pair<uint32, uint32> >& entityComponents, uint32 componentID);
 
 	NULL_COPY_AND_ASSIGN(ECS);
 };

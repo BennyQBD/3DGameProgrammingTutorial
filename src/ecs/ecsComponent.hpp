@@ -19,25 +19,25 @@ public:
 
 	inline static ECSComponentCreateFunction getTypeCreateFunction(uint32 id)
 	{
-		return std::get<0>(componentTypes[id]);
+		return std::get<0>((*componentTypes)[id]);
 	}
 
 	inline static ECSComponentFreeFunction getTypeFreeFunction(uint32 id)
 	{
-		return std::get<1>(componentTypes[id]);
+		return std::get<1>((*componentTypes)[id]);
 	}
 
 	inline static size_t getTypeSize(uint32 id)
 	{
-		return std::get<2>(componentTypes[id]);
+		return std::get<2>((*componentTypes)[id]);
 	}
 
 	inline static bool isTypeValid(uint32 id)
 	{
-		return id < componentTypes.size();
+		return id < componentTypes->size();
 	}
 private:
-	static Array<std::tuple<ECSComponentCreateFunction, ECSComponentFreeFunction, size_t> > componentTypes;
+	static Array<std::tuple<ECSComponentCreateFunction, ECSComponentFreeFunction, size_t> >* componentTypes;
 };
 
 template<typename T>

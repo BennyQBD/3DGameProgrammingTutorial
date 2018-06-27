@@ -66,6 +66,39 @@ struct MotionComponent : public ECSComponent<MotionComponent>
 	Vector3f acceleration = Vector3f(0.0f, 0.0f, 0.0f);
 };
 
+struct MegaCubeComponent : public ECSComponent<MegaCubeComponent>
+{
+	float pos[3];
+	float vel[3];
+	float acc[3];
+	uint8 texIndex;
+};
+
+class MegaCubeMotionSystem : public BaseECSSystem
+{
+public:
+	MegaCubeMotionSystem() : BaseECSSystem()
+	{
+		addComponentType(MegaCubeComponent::ID);
+	}
+
+	virtual void updateComponents(float delta, BaseECSComponent** components)
+	{
+		MegaCubeComponent* comp = (MegaCubeComponent*)components[0];
+
+		Vector3f newPos(comp->pos[0], comp->pos[1], comp->pos[2]);
+		Vector3f newVel(comp->vel[0], comp->vel[1], comp->vel[2]);
+		Vector3f acc(comp->acc[0], comp->acc[1], comp->acc[2]);
+		MotionIntegrators::forestRuth(newPos, newVel, acc, delta);
+		comp->pos[0] = newPos[0];
+		comp->pos[1] = newPos[1];
+		comp->pos[2] = newPos[2];
+		comp->vel[0] = newVel[0];
+		comp->vel[1] = newVel[1];
+		comp->vel[2] = newVel[2];
+	}
+};
+
 class MotionSystem : public BaseECSSystem
 {
 public:
@@ -173,6 +206,31 @@ private:
 	GameRenderContext& context;
 };
 
+class MegaCubeRenderer : public BaseECSSystem
+{
+public:
+	MegaCubeRenderer(GameRenderContext& contextIn, VertexArray& vertexArrayIn, Texture** texturesIn, size_t numTexturesIn)
+		: BaseECSSystem(), context(contextIn),
+		vertexArray(vertexArrayIn), textures(texturesIn), numTextures(numTexturesIn)
+	{
+		addComponentType(MegaCubeComponent::ID);
+	}
+
+	virtual void updateComponents(float delta, BaseECSComponent** components)
+	{
+		MegaCubeComponent* comp = (MegaCubeComponent*)components[0];
+
+		Transform transform(Vector3f(comp->pos[0], comp->pos[1], comp->pos[2]));
+		context.renderMesh(vertexArray, *(textures[comp->texIndex]), transform.toMatrix());
+	}
+private:
+	GameRenderContext& context;
+	VertexArray& vertexArray;
+	Texture** textures;
+	size_t numTextures;
+};
+
+
 
 // NOTE: Profiling reveals that in the current instanced rendering system:
 // - Updating the buffer takes more time than
@@ -277,6 +335,7 @@ static int runApp(Application* app)
 	renderableMesh.texture = &texture;
 
 	MotionComponent motionComponent;
+	MegaCubeComponent megaCubeComp;
 	// Create entities
 	ecs.makeEntity(transformComponent, movementControl, renderableMesh);
 	for(uint32 i = 0; i < 5000; i++) {
@@ -289,18 +348,30 @@ static int runApp(Application* app)
 		float af = 5.0f;
 		motionComponent.acceleration = Vector3f(Math::randf(-af, af), Math::randf(-af, af), Math::randf(-af, af));
 		motionComponent.velocity = motionComponent.acceleration * vf;
-		ecs.makeEntity(transformComponent, motionComponent, renderableMesh);
+		for(uint32 i = 0; i < 3; i++) {
+			megaCubeComp.pos[i] = transformComponent.transform.getTranslation()[i];
+			megaCubeComp.vel[i] = motionComponent.velocity[i];
+			megaCubeComp.acc[i] = motionComponent.acceleration[i];
+			megaCubeComp.texIndex = Math::randf() > 0.5f ? 0 : 1;
+		}
+		ecs.makeEntity(megaCubeComp);
+		//ecs.makeEntity(transformComponent, motionComponent, renderableMesh);
 	}
 	
 	// Create the systems
 	MovementControlSystem movementControlSystem;
+	MegaCubeMotionSystem megaCubeMotionSystem;
+	Texture* textures[] = { &texture, &bricks2Texture };
+	MegaCubeRenderer megaCubeRenderer(gameRenderContext, tinyCubeVertexArray, textures, ARRAY_SIZE_IN_ELEMENTS(textures));
 	MotionSystem motionSystem;
 	RenderableMeshSystem renderableMeshSystem(gameRenderContext);
 	ECSSystemList mainSystems;
 	ECSSystemList renderingPipeline;
 	mainSystems.addSystem(movementControlSystem);
 	mainSystems.addSystem(motionSystem);
+	mainSystems.addSystem(megaCubeMotionSystem);
 	renderingPipeline.addSystem(renderableMeshSystem);
+	renderingPipeline.addSystem(megaCubeRenderer);
 
 	uint32 fps = 0;
 	double lastTime = Time::getTime();

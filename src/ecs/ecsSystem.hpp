@@ -11,15 +11,15 @@ public:
 	};
 	BaseECSSystem() {}
 	virtual void updateComponents(float delta, BaseECSComponent** components) {}
-	const Array<uint32>& getComponentTypes()
+	const Array<uint32>& getComponentTypes() const
 	{
 		return componentTypes;
 	}
-	const Array<uint32>& getComponentFlags()
+	const Array<uint32>& getComponentFlags() const
 	{
 		return componentFlags;
 	}
-	bool isValid();
+	bool isValid() const;
 protected:
 	void addComponentType(uint32 componentType, uint32 componentFlag = 0)
 	{
@@ -42,7 +42,7 @@ public:
 		systems.push_back(&system);
 		return true;
 	}
-	inline size_t size() {
+	inline size_t size() const {
 		return systems.size();
 	}
 	inline BaseECSSystem* operator[](uint32 index) {

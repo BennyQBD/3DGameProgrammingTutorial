@@ -119,7 +119,6 @@ public:
 	void updateSystems(ECSSystemList& systems, float delta);
 	
 private:
-	Array<BaseECSSystem*> systems;
 	Map<uint32, Array<uint8>> components;
 	Array<std::pair<uint32, Array<std::pair<uint32, uint32> > >* > entities;
 

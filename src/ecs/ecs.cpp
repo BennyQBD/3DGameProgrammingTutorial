@@ -47,6 +47,7 @@ void ECS::removeEntity(EntityHandle handle)
 	uint32 srcIndex = entities.size() - 1;
 	delete entities[destIndex];
 	entities[destIndex] = entities[srcIndex];
+	entities[destIndex]->first = destIndex;
 	entities.pop_back();
 }
 

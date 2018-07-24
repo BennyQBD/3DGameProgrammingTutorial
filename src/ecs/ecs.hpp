@@ -7,10 +7,10 @@
 class ECSListener
 {
 public:
-	virtual void onMakeEntity(EntityHandle handle);
-	virtual void onRemoveEntity(EntityHandle handle);
-	virtual void onAddComponent(EntityHandle handle, uint32 id);
-	virtual void onRemoveComponent(EntityHandle handle, uint32 id);
+	virtual void onMakeEntity(EntityHandle handle) {}
+	virtual void onRemoveEntity(EntityHandle handle) {}
+	virtual void onAddComponent(EntityHandle handle, uint32 id) {}
+	virtual void onRemoveComponent(EntityHandle handle, uint32 id) {}
 
 	const Array<uint32>& getComponentIDs() { 
 		return componentIDs;

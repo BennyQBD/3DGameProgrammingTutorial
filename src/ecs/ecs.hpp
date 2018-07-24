@@ -4,11 +4,35 @@
 #include "ecsSystem.hpp"
 #include "dataStructures/map.hpp"
 
+class ECSListener
+{
+public:
+	virtual void onMakeEntity(EntityHandle handle);
+	virtual void onRemoveEntity(EntityHandle handle);
+	virtual void onAddComponent(EntityHandle handle, uint32 id);
+	virtual void onRemoveComponent(EntityHandle handle, uint32 id);
+
+	const Array<uint32>& getComponentIDs() { 
+		return componentIDs;
+	}
+protected:
+	void addComponentID(uint32 id) {
+		componentIDs.push_back(id);
+	}
+private:
+	Array<uint32> componentIDs;
+};
+
 class ECS
 {
 public:
 	ECS() {}
 	~ECS();
+
+	// ECSListener methods
+	inline void addListener(ECSListener* listener) {
+		listeners.push_back(listener);
+	}
 
 	// Entity methods
 	EntityHandle makeEntity(BaseECSComponent** components, const uint32* componentIDs, size_t numComponents);
@@ -101,11 +125,29 @@ public:
 	inline void addComponent(EntityHandle entity, Component* component)
 	{
 		addComponentInternal(entity, handleToEntity(entity), Component::ID, component);
+		for(uint32 i = 0; i < listeners.size(); i++) {
+			const Array<uint32>& componentIDs = listeners[i]->getComponentIDs();
+			for(uint32 j = 0; j < componentIDs.size(); j++) {
+				if(componentIDs[j] == Component::ID) {
+					listeners[i]->onAddComponent(entity, Component::ID);
+					break;
+				}
+			}
+		}
 	}
 
 	template<class Component>
 	bool removeComponent(EntityHandle entity)
 	{
+		for(uint32 i = 0; i < listeners.size(); i++) {
+			const Array<uint32>& componentIDs = listeners[i]->getComponentIDs();
+			for(uint32 j = 0; j < componentIDs.size(); j++) {
+				if(componentIDs[j] == Component::ID) {
+					listeners[i]->onRemoveComponent(entity, Component::ID);
+					break;
+				}
+			}
+		}
 		return removeComponentInternal(entity, Component::ID);
 	}
 
@@ -119,9 +161,9 @@ public:
 	void updateSystems(ECSSystemList& systems, float delta);
 	
 private:
-	Array<BaseECSSystem*> systems;
 	Map<uint32, Array<uint8>> components;
 	Array<std::pair<uint32, Array<std::pair<uint32, uint32> > >* > entities;
+	Array<ECSListener*> listeners;
 
 	inline std::pair<uint32, Array<std::pair<uint32, uint32> > >* handleToRawType(EntityHandle handle)
 	{

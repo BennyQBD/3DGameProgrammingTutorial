@@ -3,7 +3,7 @@
 
 void InteractionWorld::onMakeEntity(EntityHandle handle)
 {
-	entities.push_back(handle);
+	addEntity(handle);
 }
 
 void InteractionWorld::onRemoveEntity(EntityHandle handle)
@@ -15,12 +15,12 @@ void InteractionWorld::onAddComponent(EntityHandle handle, uint32 id)
 {
 	if(id == TransformComponent::ID) {
 		if(ecs.getComponent<ColliderComponent>(handle) != nullptr) {
-			entities.push_back(handle);
+			addEntity(handle);
 		}
 	}
 	if(id == ColliderComponent::ID) {
 		if(ecs.getComponent<TransformComponent>(handle) != nullptr) {
-			entities.push_back(handle);
+			addEntity(handle);
 		}
 	}
 }
@@ -32,6 +32,39 @@ void InteractionWorld::onRemoveComponent(EntityHandle handle, uint32 id)
 	}
 }
 
+void InteractionWorld::addEntity(EntityHandle handle)
+{
+	EntityInternal entity;
+	entity.handle = handle;
+	// TODO: Compute interactions!
+	entities.push_back(entity);
+}
+
+void InteractionWorld::computeInteractions(EntityInternal& entity, uint32 interactionIndex)
+{
+	Interaction* interaction = interactions[interactionIndex];
+	bool isInteractor = true;
+	for(size_t i = 0; i < interaction->getInteractorComponents().size(); i++) {
+		if(ecs.getComponentByType(entity.handle, interaction->getInteractorComponents()[i]) == nullptr) {
+			isInteractor = false;
+			break;
+		}
+	}
+	bool isInteractee = true;
+	for(size_t i = 0; i < interaction->getInteracteeComponents().size(); i++) {
+		if(ecs.getComponentByType(entity.handle, interaction->getInteracteeComponents()[i]) == nullptr) {
+			isInteractee = false;
+			break;
+		}
+	}
+	if(isInteractor) {
+		entity.interactors.push_back(interactionIndex);
+	}
+	if(isInteractee) {
+		entity.interactees.push_back(interactionIndex);
+	}
+}
+
 void InteractionWorld::processInteractions(float delta)
 {
 	removeEntities();
@@ -40,13 +73,13 @@ void InteractionWorld::processInteractions(float delta)
 	Vector3f centerSum(0.0f);
 	Vector3f centerSqSum(0.0f);
 	for(size_t i = 0; i < entities.size(); i++) {
-		AABB aabb = ecs.getComponent<ColliderComponent>(entities[i])->aabb;
+		AABB aabb = ecs.getComponent<ColliderComponent>(entities[i].handle)->aabb;
 		Vector3f center = aabb.getCenter();
 		centerSum += center;
 		centerSqSum += (center * center);
 		// Find intersections for this entity
 		for(size_t j = i-1; j < entities.size(); j++) {
-			AABB otherAABB = ecs.getComponent<ColliderComponent>(entities[j])->aabb;
+			AABB otherAABB = ecs.getComponent<ColliderComponent>(entities[j].handle)->aabb;
 			if(otherAABB.getMinExtents()[compareAABB.axis]
 					> aabb.getMaxExtents()[compareAABB.axis]) {
 				break;
@@ -86,7 +119,7 @@ void InteractionWorld::removeEntities()
 		do {
 			didRemove = false;
 			for(size_t j = 0; j < entitiesToRemove.size(); j++) {
-				if(entities[i] == entitiesToRemove[j]) {
+				if(entities[i].handle == entitiesToRemove[j]) {
 					entities.swap_remove(i);
 					entitiesToRemove.swap_remove(j);
 					didRemove = true;

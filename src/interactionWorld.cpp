@@ -17,11 +17,13 @@ void InteractionWorld::onAddComponent(EntityHandle handle, uint32 id)
 		if(ecs.getComponent<ColliderComponent>(handle) != nullptr) {
 			addEntity(handle);
 		}
-	}
-	if(id == ColliderComponent::ID) {
+	} else if(id == ColliderComponent::ID) {
 		if(ecs.getComponent<TransformComponent>(handle) != nullptr) {
 			addEntity(handle);
 		}
+	} else if(ecs.getComponent<ColliderComponent>(handle) != nullptr
+			&& ecs.getComponent<TransformComponent>(handle) != nullptr) {
+		entitiesToUpdate.push_back(handle);
 	}
 }
 
@@ -29,6 +31,9 @@ void InteractionWorld::onRemoveComponent(EntityHandle handle, uint32 id)
 {
 	if(id == TransformComponent::ID || id == ColliderComponent::ID) {
 		entitiesToRemove.push_back(handle);
+	} else if(ecs.getComponent<ColliderComponent>(handle) != nullptr
+			&& ecs.getComponent<TransformComponent>(handle) != nullptr) {
+		entitiesToUpdate.push_back(handle);
 	}
 }
 
@@ -36,8 +41,18 @@ void InteractionWorld::addEntity(EntityHandle handle)
 {
 	EntityInternal entity;
 	entity.handle = handle;
-	// TODO: Compute interactions!
+	for(size_t i = 0; i < interactions.size(); i++) {
+		computeInteractions(entity, i);
+	}
 	entities.push_back(entity);
+}
+
+void InteractionWorld::addInteraction(Interaction* interaction) {
+	interactions.push_back(interaction);
+	size_t index = interactions.size()-1;
+	for(size_t i = 0; i < entities.size(); i++) {
+		computeInteractions(entities[i], index);
+	}
 }
 
 void InteractionWorld::computeInteractions(EntityInternal& entity, uint32 interactionIndex)
@@ -67,7 +82,7 @@ void InteractionWorld::computeInteractions(EntityInternal& entity, uint32 intera
 
 void InteractionWorld::processInteractions(float delta)
 {
-	removeEntities();
+	removeAndUpdateEntities();
 	std::sort(entities.begin(), entities.end(), compareAABB);
 	// Go through the list, test intersections in range
 	Vector3f centerSum(0.0f);
@@ -109,12 +124,13 @@ void InteractionWorld::processInteractions(float delta)
 	compareAABB.axis = maxVarAxis;
 }
 
-void InteractionWorld::removeEntities()
+void InteractionWorld::removeAndUpdateEntities()
 {
 	if(entitiesToRemove.size() == 0) {
 		return;
 	}
 	for(size_t i = 0; i < entities.size(); i++) {
+		// Remove entities
 		bool didRemove = false;
 		do {
 			didRemove = false;
@@ -126,11 +142,24 @@ void InteractionWorld::removeEntities()
 					break;
 				}
 			}
-			if(didRemove && entitiesToRemove.size() == 0) {
+			if(entitiesToRemove.size() == 0 && entitiesToUpdate.size() == 0) {
 				return;
 			}
 		} while(didRemove);
+
+		// Update entities
+		for(size_t j = 0; j < entitiesToUpdate.size(); j++) {
+			if(entities[i].handle == entitiesToUpdate[j]) {
+				entities[i].interactors.clear();
+				entities[i].interactees.clear();
+				for(size_t k = 0; k < interactions.size(); k++) {
+					computeInteractions(entities[i], k);
+				}
+				entitiesToUpdate.swap_remove(j);
+			}
+		}
 	}
 	entitiesToRemove.clear();
+	entitiesToUpdate.clear();
 }
 

@@ -31,6 +31,7 @@ class InteractionWorld : public ECSListener
 public:
 	InteractionWorld(ECS& ecsIn) : ECSListener(), ecs(ecsIn), compareAABB(ecsIn, 0)
 	{
+		setNotificationSettings(true, false);
 		addComponentID(TransformComponent::ID);
 		addComponentID(ColliderComponent::ID);
 	}
@@ -41,10 +42,7 @@ public:
 
 	void processInteractions(float delta);
 
-	inline void addInteraction(Interaction* interaction) {
-		interactions.push_back(interaction);
-		// TODO: Update entities
-	}
+	void addInteraction(Interaction* interaction);
 private:
 	struct EntityInternal {
 		EntityHandle handle;
@@ -67,11 +65,12 @@ private:
 
 	Array<EntityInternal> entities;
 	Array<EntityHandle> entitiesToRemove;
+	Array<EntityHandle> entitiesToUpdate;
 	Array<Interaction*> interactions;
 	ECS& ecs;
 	InteractionWorldCompare compareAABB;
 
-	void removeEntities();
+	void removeAndUpdateEntities();
 	void addEntity(EntityHandle handle);
 
 	void computeInteractions(EntityInternal& entity, uint32 interactionIndex);

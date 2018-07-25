@@ -15,12 +15,28 @@ public:
 	const Array<uint32>& getComponentIDs() { 
 		return componentIDs;
 	}
+
+	inline bool shouldNotifyOnAllComponentOperations() {
+		return notifyOnAllComponentOperations;
+	}
+	inline bool shouldNotifyOnAllEntityOperations() {
+		return notifyOnAllEntityOperations;
+	}
+
 protected:
+	void setNotificationSettings(
+			bool shouldNotifyOnAllComponentOperations,
+			bool shouldNotifyOnAllEntityOperations) {
+		notifyOnAllComponentOperations = shouldNotifyOnAllComponentOperations;
+		notifyOnAllEntityOperations = shouldNotifyOnAllEntityOperations;
+	}
 	void addComponentID(uint32 id) {
 		componentIDs.push_back(id);
 	}
 private:
 	Array<uint32> componentIDs;
+	bool notifyOnAllComponentOperations = false;
+	bool notifyOnAllEntityOperations = false;
 };
 
 class ECS
@@ -127,10 +143,14 @@ public:
 		addComponentInternal(entity, handleToEntity(entity), Component::ID, component);
 		for(uint32 i = 0; i < listeners.size(); i++) {
 			const Array<uint32>& componentIDs = listeners[i]->getComponentIDs();
-			for(uint32 j = 0; j < componentIDs.size(); j++) {
-				if(componentIDs[j] == Component::ID) {
-					listeners[i]->onAddComponent(entity, Component::ID);
-					break;
+			if(listeners[i]->shouldNotifyOnAllComponentOperations()) {
+				listeners[i]->onAddComponent(entity, Component::ID);
+			} else {
+				for(uint32 j = 0; j < componentIDs.size(); j++) {
+					if(componentIDs[j] == Component::ID) {
+						listeners[i]->onAddComponent(entity, Component::ID);
+						break;
+					}
 				}
 			}
 		}
@@ -142,9 +162,13 @@ public:
 		for(uint32 i = 0; i < listeners.size(); i++) {
 			const Array<uint32>& componentIDs = listeners[i]->getComponentIDs();
 			for(uint32 j = 0; j < componentIDs.size(); j++) {
-				if(componentIDs[j] == Component::ID) {
+				if(listeners[i]->shouldNotifyOnAllComponentOperations()) {
 					listeners[i]->onRemoveComponent(entity, Component::ID);
-					break;
+				} else {
+					if(componentIDs[j] == Component::ID) {
+						listeners[i]->onRemoveComponent(entity, Component::ID);
+						break;
+					}
 				}
 			}
 		}

@@ -36,21 +36,25 @@ EntityHandle ECS::makeEntity(BaseECSComponent** entityComponents, const uint32* 
 
 	for(uint32 i = 0; i < listeners.size(); i++) {
 		bool isValid = true;
-		for(uint32 j = 0; j < listeners[i]->getComponentIDs().size(); j++) {
-			bool hasComponent = false;
-			for(uint32 k = 0; k < numComponents; k++) {
-				if(listeners[i]->getComponentIDs()[j] == componentIDs[k]) {
-					hasComponent = true;
+		if(listeners[i]->shouldNotifyOnAllEntityOperations()) {
+			listeners[i]->onMakeEntity(handle);
+		} else {
+			for(uint32 j = 0; j < listeners[i]->getComponentIDs().size(); j++) {
+				bool hasComponent = false;
+				for(uint32 k = 0; k < numComponents; k++) {
+					if(listeners[i]->getComponentIDs()[j] == componentIDs[k]) {
+						hasComponent = true;
+						break;
+					}
+				}
+				if(!hasComponent) {
+					isValid = false;
 					break;
 				}
 			}
-			if(!hasComponent) {
-				isValid = false;
-				break;
+			if(isValid) {
+				listeners[i]->onMakeEntity(handle);
 			}
-		}
-		if(isValid) {
-			listeners[i]->onMakeEntity(handle);
 		}
 	}
 
@@ -64,21 +68,25 @@ void ECS::removeEntity(EntityHandle handle)
 	for(uint32 i = 0; i < listeners.size(); i++) {
 		const Array<uint32>& componentIDs = listeners[i]->getComponentIDs();
 		bool isValid = true;
-		for(uint32 j = 0; j < componentIDs.size(); j++) {
-			bool hasComponent = false;
-			for(uint32 k = 0; k < entity.size(); k++) {
-				if(componentIDs[j] == entity[k].first) {
-					hasComponent = true;
+		if(listeners[i]->shouldNotifyOnAllEntityOperations()) {
+			listeners[i]->onRemoveEntity(handle);
+		} else {
+			for(uint32 j = 0; j < componentIDs.size(); j++) {
+				bool hasComponent = false;
+				for(uint32 k = 0; k < entity.size(); k++) {
+					if(componentIDs[j] == entity[k].first) {
+						hasComponent = true;
+						break;
+					}
+				}
+				if(!hasComponent) {
+					isValid = false;
 					break;
 				}
 			}
-			if(!hasComponent) {
-				isValid = false;
-				break;
+			if(isValid) {
+				listeners[i]->onRemoveEntity(handle);
 			}
-		}
-		if(isValid) {
-			listeners[i]->onRemoveEntity(handle);
 		}
 	}
 	

@@ -83,26 +83,56 @@ void InteractionWorld::computeInteractions(EntityInternal& entity, uint32 intera
 void InteractionWorld::processInteractions(float delta)
 {
 	removeAndUpdateEntities();
+	for(size_t i = 0; i < entities.size(); i++) {
+		ColliderComponent* colliderComponent = ecs.getComponent<ColliderComponent>(entities[i].handle);
+		colliderComponent->transformedAABB = colliderComponent->aabb.transform(
+				ecs.getComponent<TransformComponent>(entities[i].handle)->transform.toMatrix());
+	}
 	std::sort(entities.begin(), entities.end(), compareAABB);
 	// Go through the list, test intersections in range
+	Array<BaseECSComponent*> interactorComponents;
+	Array<BaseECSComponent*> interacteeComponents;
 	Vector3f centerSum(0.0f);
 	Vector3f centerSqSum(0.0f);
 	for(size_t i = 0; i < entities.size(); i++) {
-		AABB aabb = ecs.getComponent<ColliderComponent>(entities[i].handle)->aabb;
+		AABB aabb = ecs.getComponent<ColliderComponent>(entities[i].handle)->transformedAABB;
 		Vector3f center = aabb.getCenter();
 		centerSum += center;
 		centerSqSum += (center * center);
 		// Find intersections for this entity
-		for(size_t j = i-1; j < entities.size(); j++) {
-			AABB otherAABB = ecs.getComponent<ColliderComponent>(entities[j].handle)->aabb;
+		for(size_t j = i+1; j < entities.size(); j++) {
+			AABB otherAABB = ecs.getComponent<ColliderComponent>(entities[j].handle)->transformedAABB;
 			if(otherAABB.getMinExtents()[compareAABB.axis]
 					> aabb.getMaxExtents()[compareAABB.axis]) {
 				break;
 			}
 
 			if(aabb.intersects(otherAABB)) {
-				// if rules say so, then entities[i] interacts with entities[j]
-				// if rules say so, then entities[j] interacts with entities[i]
+				size_t interactorIndex = i;
+				size_t interacteeIndex = j;
+				for(size_t dummyIndex = 0; dummyIndex < 2; dummyIndex++) {
+					for(size_t k = 0; k < entities[interactorIndex].interactors.size(); k++) {
+						for(size_t l = 0; l < entities[interacteeIndex].interactees.size(); l++) {
+							uint32 index = entities[interactorIndex].interactors[k];
+							if(index == entities[interacteeIndex].interactees[l]) {
+								Interaction* interaction = interactions[index];
+								interactorComponents.resize(Math::max(interactorComponents.size(), interaction->getInteractorComponents().size()));
+								interacteeComponents.resize(Math::max(interacteeComponents.size(), interaction->getInteracteeComponents().size()));
+								for(size_t m = 0; m < interaction->getInteractorComponents().size(); m++) {
+									interactorComponents[m] = ecs.getComponentByType(entities[interactorIndex].handle, interaction->getInteractorComponents()[m]);	
+								}
+								for(size_t m = 0; m < interaction->getInteracteeComponents().size(); m++) {
+									interacteeComponents[m] = ecs.getComponentByType(entities[interacteeIndex].handle, interaction->getInteracteeComponents()[m]);	
+								}
+								interaction->interact(delta, &interactorComponents[0], &interacteeComponents[0]);
+							}
+						}
+					}
+					// Check the other possibility: If the first entity is the interactee instead of the interactor
+					size_t tempIndex = interactorIndex;
+					interactorIndex = interacteeIndex;
+					interacteeIndex = tempIndex;
+				}
 			}
 		}
 	}

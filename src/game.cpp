@@ -9,6 +9,20 @@
 #include "gameCS/motion.hpp"
 #include "gameCS/megaCube.hpp"
 
+class TestInteraction : public Interaction
+{
+public:
+	TestInteraction() : Interaction()
+	{
+//		addInteractorComponentType();
+//		addInteracteeComponentType();
+	}
+
+	virtual void interact(float delta, BaseECSComponent** interactorComponents, BaseECSComponent** interacteeComponents)
+	{
+		DEBUG_LOG_TEMP2("Interacting!!");
+	}
+};
 
 void Game::gameLoop()
 {
@@ -37,6 +51,7 @@ void Game::gameLoop()
 		while(updateTimer >= frameTime) {
 			app->processMessages(frameTime, eventHandler);
 			ecs.updateSystems(mainSystems, frameTime);
+			interactionWorld.processInteractions(frameTime);
 			updateTimer -= frameTime;
 			shouldRender = true;
 		}
@@ -82,7 +97,10 @@ int Game::loadAndRunScene(RenderDevice& device)
 	VertexArray vertexArray(device, models[0], RenderDevice::USAGE_STATIC_DRAW);
 	VertexArray tinyCubeVertexArray(device, models[1], RenderDevice::USAGE_STATIC_DRAW);
 	
-//	ArrayBitmap bitmap;
+	AABB vertexArrayAABB = models[0].getAABBForElementArray(0);
+	AABB tinyCubeVertexArrayAABB = models[1].getAABBForElementArray(0);
+
+	//	ArrayBitmap bitmap;
 //	bitmap.set(0,0, Color::WHITE.toInt());
 //	if(!bitmap.load("./res/textures/bricks.jpg")) {
 //		DEBUG_LOG("Main", LOG_ERROR, "Could not load texture!");
@@ -114,6 +132,9 @@ int Game::loadAndRunScene(RenderDevice& device)
 	eventHandler.addKeyControl(Input::KEY_DOWN, vertical, -1.0f);
 
 	// Create components
+	ColliderComponent colliderComponent;
+	colliderComponent.aabb = vertexArrayAABB;
+
 	TransformComponent transformComponent;
 	transformComponent.transform.setTranslation(Vector3f(0.0f, 0.0f, 20.0f));
 
@@ -128,25 +149,26 @@ int Game::loadAndRunScene(RenderDevice& device)
 	MotionComponent motionComponent;
 	MegaCubeComponent megaCubeComp;
 	// Create entities
-	ecs.makeEntity(transformComponent, movementControl, renderableMesh);
-	for(uint32 i = 0; i < 5000; i++) {
-		transformComponent.transform.setTranslation(Vector3f(Math::randf()*10.0f-5.0f, Math::randf()*10.0f-5.0f, 
-					Math::randf()*10.0f-5.0f + 20.0f));
+	ecs.makeEntity(transformComponent, movementControl, renderableMesh, colliderComponent);
+	for(uint32 i = 0; i < 1; i++) {
+		transformComponent.transform.setTranslation(Vector3f(Math::randf()*10.0f-5.0f, Math::randf()*10.0f-5.0f, 20.0f));
+					//Math::randf()*10.0f-5.0f + 20.0f));
 		renderableMesh.vertexArray = &tinyCubeVertexArray;
+		colliderComponent.aabb = tinyCubeVertexArrayAABB;
 		renderableMesh.texture = Math::randf() > 0.5f ? &texture : &bricks2Texture;
 		
 		float vf = -4.0f;
 		float af = 5.0f;
 		motionComponent.acceleration = Vector3f(Math::randf(-af, af), Math::randf(-af, af), Math::randf(-af, af));
 		motionComponent.velocity = motionComponent.acceleration * vf;
-		for(uint32 i = 0; i < 3; i++) {
-			megaCubeComp.pos[i] = transformComponent.transform.getTranslation()[i];
-			megaCubeComp.vel[i] = motionComponent.velocity[i];
-			megaCubeComp.acc[i] = motionComponent.acceleration[i];
-			megaCubeComp.texIndex = Math::randf() > 0.5f ? 0 : 1;
-		}
-		ecs.makeEntity(megaCubeComp);
-		//ecs.makeEntity(transformComponent, motionComponent, renderableMesh);
+//		for(uint32 i = 0; i < 3; i++) {
+//			megaCubeComp.pos[i] = transformComponent.transform.getTranslation()[i];
+//			megaCubeComp.vel[i] = motionComponent.velocity[i];
+//			megaCubeComp.acc[i] = motionComponent.acceleration[i];
+//			megaCubeComp.texIndex = Math::randf() > 0.5f ? 0 : 1;
+//		}
+		//ecs.makeEntity(megaCubeComp);
+		ecs.makeEntity(transformComponent, renderableMesh, colliderComponent);
 	}
 	
 	// Create the systems
@@ -162,6 +184,10 @@ int Game::loadAndRunScene(RenderDevice& device)
 	mainSystems.addSystem(megaCubeMotionSystem);
 	renderingPipeline.addSystem(renderableMeshSystem);
 	renderingPipeline.addSystem(megaCubeRenderer);
+
+	// Create interactions
+	TestInteraction testInteraction;
+	interactionWorld.addInteraction(&testInteraction);
 
 	gameLoop();
 	return 0;

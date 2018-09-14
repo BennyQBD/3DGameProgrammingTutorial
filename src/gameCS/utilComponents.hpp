@@ -12,6 +12,7 @@ struct TransformComponent : public ECSComponent<TransformComponent>
 struct ColliderComponent : public ECSComponent<ColliderComponent>
 {
 	AABB aabb;
+	AABB transformedAABB;
 };
 
 

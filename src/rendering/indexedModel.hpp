@@ -1,6 +1,7 @@
 #pragma once
 
 #include "renderDevice.hpp"
+#include "math/aabb.hpp"
 
 class IndexedModel
 {
@@ -22,6 +23,10 @@ public:
 	void addIndices2i(uint32 i0, uint32 i1);
 	void addIndices3i(uint32 i0, uint32 i1, uint32 i2);
 	void addIndices4i(uint32 i0, uint32 i1, uint32 i2, uint32 i3);
+
+	inline AABB getAABBForElementArray(uint32 index) {
+		return AABB(&elements[index][0], elements[index].size()/elementSizes[index]);
+	}
 
 	uint32 getNumIndices() const;
 private:

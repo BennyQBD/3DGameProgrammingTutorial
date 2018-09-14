@@ -57,8 +57,8 @@ private:
 		InteractionWorldCompare(ECS& ecsIn, uint32 axisIn) :
 			axis(axisIn), ecs(ecsIn) {}
 		bool operator()(EntityInternal& a, EntityInternal& b) {
-			float aMin = ecs.getComponent<ColliderComponent>(a.handle)->aabb.getMinExtents()[axis];
-			float bMin = ecs.getComponent<ColliderComponent>(b.handle)->aabb.getMinExtents()[axis];
+			float aMin = ecs.getComponent<ColliderComponent>(a.handle)->transformedAABB.getMinExtents()[axis];
+			float bMin = ecs.getComponent<ColliderComponent>(b.handle)->transformedAABB.getMinExtents()[axis];
 			return (aMin < bMin);
 		}
 	};

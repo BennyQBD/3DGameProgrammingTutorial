@@ -14,13 +14,23 @@ class TestInteraction : public Interaction
 public:
 	TestInteraction() : Interaction()
 	{
-//		addInteractorComponentType();
-//		addInteracteeComponentType();
+		addInteractorComponentType(TransformComponent::ID);
+		addInteractorComponentType(ColliderComponent::ID);
+		addInteractorComponentType(MotionComponent::ID);
+		addInteracteeComponentType(TransformComponent::ID);
+		addInteracteeComponentType(ColliderComponent::ID);
+		addInteracteeComponentType(MotionComponent::ID);
 	}
 
 	virtual void interact(float delta, BaseECSComponent** interactorComponents, BaseECSComponent** interacteeComponents)
 	{
-		DEBUG_LOG_TEMP2("Interacting!!");
+		Transform& transform = ((TransformComponent*)interactorComponents[0])->transform;
+		MotionComponent* motionComponent = ((MotionComponent*)interactorComponents[2]);
+
+		motionComponent->velocity = motionComponent->velocity * -1.1f;
+
+//		transform.setRotation((transform.getRotation()*Quaternion(Vector3f(0.0f,0.0f,1.0f), delta)).normalized());
+//		DEBUG_LOG_TEMP2("Interacting!!");
 	}
 };
 
@@ -139,8 +149,8 @@ int Game::loadAndRunScene(RenderDevice& device)
 	transformComponent.transform.setTranslation(Vector3f(0.0f, 0.0f, 20.0f));
 
 	MovementControlComponent movementControl;
-	movementControl.movementControls.push_back(std::make_pair(Vector3f(1.0f,0.0f,0.0f) * 10.0f, &horizontal));
-	movementControl.movementControls.push_back(std::make_pair(Vector3f(0.0f,1.0f,0.0f) * 10.0f, &vertical));
+	movementControl.movementControls.push_back(MovementControl(Vector3f(1.0f,0.0f,0.0f) * 30.0f, &horizontal));
+	movementControl.movementControls.push_back(MovementControl(Vector3f(0.0f,1.0f,0.0f) * 30.0f, &vertical));
 
 	RenderableMeshComponent renderableMesh;
 	renderableMesh.vertexArray = &vertexArray;
@@ -149,7 +159,7 @@ int Game::loadAndRunScene(RenderDevice& device)
 	MotionComponent motionComponent;
 	MegaCubeComponent megaCubeComp;
 	// Create entities
-	ecs.makeEntity(transformComponent, movementControl, renderableMesh, colliderComponent);
+	ecs.makeEntity(transformComponent, movementControl, motionComponent, renderableMesh, colliderComponent);
 	for(uint32 i = 0; i < 1; i++) {
 		transformComponent.transform.setTranslation(Vector3f(Math::randf()*10.0f-5.0f, Math::randf()*10.0f-5.0f, 20.0f));
 					//Math::randf()*10.0f-5.0f + 20.0f));
@@ -159,8 +169,8 @@ int Game::loadAndRunScene(RenderDevice& device)
 		
 		float vf = -4.0f;
 		float af = 5.0f;
-		motionComponent.acceleration = Vector3f(Math::randf(-af, af), Math::randf(-af, af), Math::randf(-af, af));
-		motionComponent.velocity = motionComponent.acceleration * vf;
+//		motionComponent.acceleration = Vector3f(Math::randf(-af, af), Math::randf(-af, af), Math::randf(-af, af));
+//		motionComponent.velocity = motionComponent.acceleration * vf;
 //		for(uint32 i = 0; i < 3; i++) {
 //			megaCubeComp.pos[i] = transformComponent.transform.getTranslation()[i];
 //			megaCubeComp.vel[i] = motionComponent.velocity[i];
@@ -168,7 +178,7 @@ int Game::loadAndRunScene(RenderDevice& device)
 //			megaCubeComp.texIndex = Math::randf() > 0.5f ? 0 : 1;
 //		}
 		//ecs.makeEntity(megaCubeComp);
-		ecs.makeEntity(transformComponent, renderableMesh, colliderComponent);
+		ecs.makeEntity(transformComponent, renderableMesh, motionComponent, colliderComponent);
 	}
 	
 	// Create the systems

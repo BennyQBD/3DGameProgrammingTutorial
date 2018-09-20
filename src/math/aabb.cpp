@@ -37,17 +37,46 @@ AABB::AABB(float* points, uint32 amt, uint32 stride)
 
 AABB AABB::transform(const Matrix& transform) const
 {
-	Vector center(getCenter().toVector(1.0f));
-	Vector extents(getExtents().toVector(0.0f));
-	Vector absExtents = extents.abs();
-	Matrix absMatrix(transform);
-	for(uint32 i = 0; i < 4; i++) {
-		absMatrix[i]=absMatrix[i].abs();
-	}
+	Vector p000 = extents[0].toVector(1.0f);
+	Vector p111 = extents[1].toVector(1.0f);
 
-	Vector newCenter = transform.transform(center);
-	Vector newExtents = absMatrix.transform(absExtents);
-	return AABB(newCenter-newExtents, newCenter+newExtents);
+	Vector p100 = p000.select(VectorConstants::MASK_X, p111);
+	Vector p010 = p000.select(VectorConstants::MASK_Y, p111);
+	Vector p001 = p000.select(VectorConstants::MASK_Z, p111);
+	Vector p011 = p111.select(VectorConstants::MASK_X, p000);
+	Vector p101 = p111.select(VectorConstants::MASK_Y, p000);
+	Vector p110 = p111.select(VectorConstants::MASK_Z, p000);
+
+	p000 = transform.transform(p000);
+	p001 = transform.transform(p001);
+	p010 = transform.transform(p010);
+	p011 = transform.transform(p011);
+	p100 = transform.transform(p100);
+	p101 = transform.transform(p101);
+	p110 = transform.transform(p110);
+	p111 = transform.transform(p111);
+
+	Vector newMin =
+		(p000.min(p001)).min(p010.min(p011)).min(
+		(p100.min(p101)).min(p110.min(p111)));
+	Vector newMax =
+		(p000.max(p001)).max(p010.max(p011)).max(
+		(p100.max(p101)).max(p110.max(p111)));
+	return AABB(newMin, newMax);
+//	Vector center(getCenter().toVector(1.0f));
+//	Vector extents(getExtents().toVector(0.0f));
+//	Vector absExtents = extents.abs();
+//	Matrix absMatrix(transform);
+//	for(uint32 i = 0; i < 4; i++) {
+//		absMatrix[i]=absMatrix[i].abs();
+//	}
+//
+//	Vector newCenter = transform.transform(center);
+//	Vector newExtents = absMatrix.transform(absExtents);
+//
+//	Vector newMinExtents = newCenter-newExtents;
+//	Vector newMaxExtents = newCenter+newExtents;
+//	return AABB(newMinExtents.min(newMaxExtents), newMaxExtents.max(newMinExtents));
 }
 
 bool AABB::intersectRay(const Vector3f& start, const Vector3f& rayDir, float& point1, float& point2) const

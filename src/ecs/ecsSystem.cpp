@@ -1,6 +1,6 @@
 #include "ecsSystem.hpp"
 
-bool BaseECSSystem::isValid()
+bool BaseECSSystem::isValid() const
 {
 	for(uint32 i = 0;  i < componentFlags.size(); i++) {
 		if((componentFlags[i] & BaseECSSystem::FLAG_OPTIONAL) == 0) {
